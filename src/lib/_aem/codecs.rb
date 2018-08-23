@@ -34,33 +34,33 @@ class UnitTypeCodecs
 		[:feet, KAE::TypeFeet],
 		[:yards, KAE::TypeYards],
 		[:miles, KAE::TypeMiles],
-		
+
 		[:square_meters, KAE::TypeSquareMeters],
 		[:square_kilometers, KAE::TypeSquareKilometers],
 		[:square_feet, KAE::TypeSquareFeet],
 		[:square_yards, KAE::TypeSquareYards],
 		[:square_miles, KAE::TypeSquareMiles],
-		
+
 		[:cubic_centimeters, KAE::TypeCubicCentimeter],
 		[:cubic_meters, KAE::TypeCubicMeters],
 		[:cubic_inches, KAE::TypeCubicInches],
 		[:cubic_feet, KAE::TypeCubicFeet],
 		[:cubic_yards, KAE::TypeCubicYards],
-		
+
 		[:liters, KAE::TypeLiters],
 		[:quarts, KAE::TypeQuarts],
 		[:gallons, KAE::TypeGallons],
-		
+
 		[:grams, KAE::TypeGrams],
 		[:kilograms, KAE::TypeKilograms],
 		[:ounces, KAE::TypeOunces],
 		[:pounds, KAE::TypePounds],
-		
+
 		[:degrees_Celsius, KAE::TypeDegreesC],
 		[:degrees_Fahrenheit, KAE::TypeDegreesF],
 		[:degrees_Kelvin, KAE::TypeDegreesK],
 	]
-	
+
 	DefaultPacker = proc { |units, code| AE::AEDesc.new(code, [units.value].pack('d')) }
 	DefaultUnpacker = proc { |desc, name| MacTypes::Units.new(desc.data.unpack('d')[0], name) }
 
@@ -69,7 +69,7 @@ class UnitTypeCodecs
 		@type_by_code = {}
 		add_types(DefaultUnitTypes)
 	end
-	
+
 	def add_types(type_defs)
 		# type_defs is a list of lists, where each sublist is of form:
 		#	[typename, typecode, packproc, unpackproc]
@@ -82,7 +82,7 @@ class UnitTypeCodecs
 			@type_by_code[code] = [name, (unpacker or DefaultUnpacker)]
 		end
 	end
-	
+
 	def pack(val)
 		if val.is_a?(MacTypes::Units)
 			code, packer = @type_by_name.fetch(val.type) { |v| raise IndexError, "Unknown unit type: #{v.inspect}" }
@@ -91,7 +91,7 @@ class UnitTypeCodecs
 			return [false, val]
 		end
 	end
-	
+
 	def unpack(desc)
 		name, unpacker = @type_by_code.fetch(desc.type) { |d| return [false, d] }
 		return [true, unpacker.call(desc, name)]
@@ -105,7 +105,7 @@ end
 # Endianness support
 
 module BigEndianConverters
-	
+
 	def four_char_code(code)
 		return code
 	end
@@ -114,11 +114,11 @@ end
 
 
 module SmallEndianConverters
-	
+
 	def four_char_code(code)
 		return code.reverse
 	end
-	
+
 end
 
 
@@ -138,7 +138,7 @@ class Codecs
 	# May be subclassed to extend/alter its behaviour (e.g. the appscript layer does this).
 	# Conversions that are most likely to be modified (e.g. for packing and and unpacking
 	# references, records, types and enums) are exposed as overrideable hook methods.
-	
+
 	extend([1].pack('s') == "\001\000" ? SmallEndianConverters : BigEndianConverters)
 
 	def initialize
@@ -154,16 +154,16 @@ class Codecs
 		@encoding_support = AEMEncodingSupport.encoding_support
 		@unpack_dates_as_datetime = false
 	end
-	
+
 	######################################################################
 	# Compatibility options
-	
+
 	def add_unit_types(type_defs)
 		# register custom unit type definitions with this Codecs instance
 		# e.g. Adobe apps define additional unit types (ciceros, pixels, etc.)
 		@unit_type_codecs.add_types(type_defs)
 	end
-	
+
 	def dont_cache_unpacked_specifiers
 		# When unpacking object specifiers, unlike AppleScript, appscript caches
 		# the original AEDesc for efficiency, allowing the resulting reference to
@@ -175,29 +175,29 @@ class Codecs
 	end
 
 	def pack_strings_as_type(code)
-		# Some older (pre-OS X) applications may require text to be passed as 
+		# Some older (pre-OS X) applications may require text to be passed as
 		# typeChar or typeIntlText rather than the usual typeUnicodeText. To force
-		# an AEM::Codecs object to pack strings as one of these older types, call 
+		# an AEM::Codecs object to pack strings as one of these older types, call
 		# its pack_strings_as_type method, specifying the type you want used instead.
 		if not(code.is_a?(String) and code.length == 4)
 			raise ArgumentError, "Code must be a four-character string: #{code.inspect}"
 		end
 		@pack_text_as_type = code
 	end
-	
+
 	def use_ascii_8bit
-		# By default on Ruby 1.9+, Codecs#pack creates String instances with UTF-8 
-		# encoding and #unpack ensures all strings are UTF-8 encoded before packing 
+		# By default on Ruby 1.9+, Codecs#pack creates String instances with UTF-8
+		# encoding and #unpack ensures all strings are UTF-8 encoded before packing
 		# them into AEDescs of typeUTF8Text. To force the old-style behaviour where
 		# strings are treated as byte strings containing UTF-8 data, call:
 		#
 		#	some_application.AS_app_data.use_ascii_8bit_strings
 		#
-		# This will cause Strings to use the binary ASCII-8BIT encoding; as in Ruby 1.8, 
+		# This will cause Strings to use the binary ASCII-8BIT encoding; as in Ruby 1.8,
 		# the user is responsible for ensuring that strings contain UTF-8 data.
 		@encoding_support = AEMEncodingSupport::DisableStringEncodings
 	end
-	
+
 	def use_datetime
 		# By default dates are unpacked as Time instances, which have limited range.
 		# Call this method to unpack dates as DateTime instances instead.
@@ -206,14 +206,14 @@ class Codecs
 
 	######################################################################
 	# Subclasses could override these to provide their own reference roots if needed
-	
+
 	App = AEMReference::App
 	Con = AEMReference::Con
 	Its = AEMReference::Its
-	
+
 	######################################################################
 	# Pack
-	
+
 	SInt32Bounds = (-2**31)..(2**31-1)
 	SInt64Bounds = (-2**63)..(2**63-1)
 	UInt64Bounds = (2**63)..(2**64-1)
@@ -221,21 +221,21 @@ class Codecs
 	NullDesc = AE::AEDesc.new(KAE::TypeNull, '')
 	TrueDesc = AE::AEDesc.new(KAE::TypeTrue, '')
 	FalseDesc = AE::AEDesc.new(KAE::TypeFalse, '')
-	
+
 	##
-	
+
 	def pack_unknown(val) # clients may override this to provide additional packers
 		raise TypeError, "Can't pack data into an AEDesc (unsupported type): #{val.inspect}"
 	end
-	
-	
+
+
 	def pack(val) # clients may override this to replace existing packers
 		case val
 			when AEMReference::Query then val.AEM_pack_self(self)
-			
-			when Fixnum, Bignum then
+
+			when Integer then
 				if SInt32Bounds === val
-					AE::AEDesc.new(KAE::TypeSInt32, [val].pack('l')) 
+					AE::AEDesc.new(KAE::TypeSInt32, [val].pack('l'))
 				elsif SInt64Bounds === val
 					AE::AEDesc.new(KAE::TypeSInt64, [val].pack('q'))
 				elsif UInt64Bounds === val
@@ -243,39 +243,39 @@ class Codecs
 				else
 					AE::AEDesc.new(KAE::TypeFloat, [val.to_f].pack('d'))
 				end
-			
-			when String then 
+
+			when String then
 				@encoding_support.pack_string(val, @pack_text_as_type)
-			
+
 			when TrueClass then TrueDesc
 			when FalseClass then FalseDesc
-			
+
 			when Float then AE::AEDesc.new(KAE::TypeFloat, [val].pack('d'))
-			
+
 			when Time
 				AE::AEDesc.new(KAE::TypeLongDateTime,
 					[AE.convert_unix_seconds_to_long_date_time(val.to_i)].pack('q'))
-			
+
 			when DateTime, Date then
 				AE::AEDesc.new(KAE::TypeLongDateTime,
 					[AE.convert_string_to_long_date_time(val.strftime('%F %T'))].pack('q'))
-			
+
 			when Array then pack_array(val)
 			when Hash then pack_hash(val)
-			
+
 			when MacTypes::FileBase then val.desc
-			
+
 			when TypeWrappers::AEType then
 				AE::AEDesc.new(KAE::TypeType, Codecs.four_char_code(val.code))
 			when TypeWrappers::AEEnum then
 				AE::AEDesc.new(KAE::TypeEnumerated, Codecs.four_char_code(val.code))
-			when TypeWrappers::AEProp then 
+			when TypeWrappers::AEProp then
 				AE::AEDesc.new(KAE::TypeProperty, Codecs.four_char_code(val.code))
 			when TypeWrappers::AEKey then
 				AE::AEDesc.new(KAE::TypeKeyword, Codecs.four_char_code(val.code))
-			
+
 			when AE::AEDesc then val
-				
+
 			when NilClass then NullDesc
 		else
 			did_pack, desc = @unit_type_codecs.pack(val)
@@ -286,10 +286,10 @@ class Codecs
 			end
 		end
 	end
-	
+
 	#######
-	
-	def pack_uint64(val) 
+
+	def pack_uint64(val)
 		# On 10.5+, clients could override this method to do a non-lossy conversion,
 		# (assuming target app knows how to handle new UInt64 type):
 		#
@@ -298,7 +298,7 @@ class Codecs
 		# end
 		AE::AEDesc.new(KAE::TypeFloat, [val.to_f].pack('d')) # pack as 64-bit float for compatibility (lossy conversion)
 	end
-	
+
 	def pack_array(val)
 		lst = AE::AEDesc.new_list(false)
 		val.each do |item|
@@ -306,7 +306,7 @@ class Codecs
 		end
 		return lst
 	end
-	
+
 	def pack_hash(val)
 		record = AE::AEDesc.new_list(true)
 		usrf = nil
@@ -334,10 +334,10 @@ class Codecs
 		end
 		return record
 	end
-	
+
 	######################################################################
 	# Unpack
-	
+
 	def unpack_unknown(desc) # clients may override this to provide additional unpackers
 		if desc.is_record? # if it's a record-like structure with an unknown/unsupported type then unpack it as a hash, including the original type info as a 'class' property
 			rec = desc.coerce(KAE::TypeAERecord)
@@ -347,27 +347,27 @@ class Codecs
 			desc
 		end
 	end
-	
-	
+
+
 	def unpack(desc) # clients may override this to replace existing unpackers
 		return case desc.type
-			
+
 			when KAE::TypeObjectSpecifier then unpack_object_specifier(desc)
-			
+
 			when KAE::TypeSInt32 then desc.data.unpack('l')[0]
 			when KAE::TypeIEEE64BitFloatingPoint then desc.data.unpack('d')[0]
-			
-			when 
+
+			when
 					KAE::TypeUnicodeText,
-					KAE::TypeChar, 
-					KAE::TypeIntlText, 
+					KAE::TypeChar,
+					KAE::TypeIntlText,
 					KAE::TypeUTF16ExternalRepresentation,
 					KAE::TypeStyledText
 				@encoding_support.unpack_string(desc)
-				
+
 			when KAE::TypeFalse then false
 			when KAE::TypeTrue then true
-			
+
 			when KAE::TypeLongDateTime then
 				t = desc.data.unpack('q')[0]
 				if @unpack_dates_as_datetime
@@ -375,46 +375,46 @@ class Codecs
 				else
 					Time.at(AE.convert_long_date_time_to_unix_seconds(t))
 				end
-			
+
 			when KAE::TypeAEList then unpack_aelist(desc)
 			when KAE::TypeAERecord then unpack_aerecord(desc)
-			
+
 			when KAE::TypeAlias then MacTypes::Alias.desc(desc)
-			when 
+			when
 					KAE::TypeFileURL,
 					KAE::TypeFSRef,
 					KAE::TypeFSS
 				MacTypes::FileURL.desc(desc)
-			
+
 			when KAE::TypeType then unpack_type(desc)
 			when KAE::TypeEnumerated then unpack_enumerated(desc)
 			when KAE::TypeProperty then unpack_property(desc)
 			when KAE::TypeKeyword then unpack_keyword(desc)
-			
+
 			when KAE::TypeSInt16 then desc.data.unpack('s')[0]
 			when KAE::TypeUInt32 then desc.data.unpack('L')[0]
 			when KAE::TypeSInt64 then desc.data.unpack('q')[0]
-			
+
 			when KAE::TypeNull then nil
-			
+
 			when KAE::TypeUTF8Text then desc.data
-			
+
 			when KAE::TypeInsertionLoc then unpack_insertion_loc(desc)
 			when KAE::TypeCurrentContainer then unpack_current_container(desc)
 			when KAE::TypeObjectBeingExamined then unpack_object_being_examined(desc)
 			when KAE::TypeCompDescriptor then unpack_comp_descriptor(desc)
 			when KAE::TypeLogicalDescriptor then unpack_logical_descriptor(desc)
-			
+
 			when KAE::TypeIEEE32BitFloatingPoint then desc.data.unpack('f')[0]
-			when KAE::Type128BitFloatingPoint then 
+			when KAE::Type128BitFloatingPoint then
 				desc.coerce(KAE::TypeIEEE64BitFloatingPoint).data.unpack('d')[0]
-			
+
 			when KAE::TypeQDPoint then desc.data.unpack('ss').reverse
 			when KAE::TypeQDRectangle then
 				x1, y1, x2, y2 = desc.data.unpack('ssss')
 				[y1, x1, y2, x2]
 			when KAE::TypeRGBColor then desc.data.unpack('SSS')
-				
+
 			when KAE::TypeVersion
 				begin
 					unpack(desc.coerce(KAE::TypeUnicodeText)) # supported in 10.4+
@@ -422,9 +422,9 @@ class Codecs
 					vers, lo = desc.data.unpack('CC')
 					subvers, patch = lo.divmod(16)
 					"#{vers}.#{subvers}.#{patch}"
-				end	
+				end
 			when KAE::TypeBoolean then desc.data[0,1] != "\000"
-			
+
 			when KAE::TypeUInt16 then desc.data.unpack('S')[0] # 10.5+
 			when KAE::TypeUInt64 then desc.data.unpack('Q')[0] # 10.5+
 		else
@@ -436,9 +436,9 @@ class Codecs
 			end
 		end
 	end
-	
+
 	#######
-	
+
 	def unpack_aelist(desc)
 		lst = []
 		desc.length().times do |i|
@@ -462,46 +462,46 @@ class Codecs
 		end
 		return dct
 	end
-	
+
 	#######
-	
+
 	def unpack_type(desc)
 		return TypeWrappers::AEType.new(Codecs.four_char_code(desc.data))
 	end
-	
+
 	def unpack_enumerated(desc)
 		return TypeWrappers::AEEnum.new(Codecs.four_char_code(desc.data))
 	end
-	
+
 	def unpack_property(desc)
 		return TypeWrappers::AEProp.new(Codecs.four_char_code(desc.data))
 	end
-	
+
 	def unpack_keyword(desc)
 		return TypeWrappers::AEKey.new(Codecs.four_char_code(desc.data))
 	end
-	
+
 	#######
 	# Lookup tables for converting enumerator, ordinal codes to aem reference method names.
 	# Used by unpack_object_specifier, fully_unpack_object_specifier to construct aem references.
-	
+
 	AbsoluteOrdinals = {
-			Codecs.four_char_code(KAE::KAEFirst) => 'first', 
-			Codecs.four_char_code(KAE::KAELast) => 'last', 
-			Codecs.four_char_code(KAE::KAEMiddle) => 'middle', 
+			Codecs.four_char_code(KAE::KAEFirst) => 'first',
+			Codecs.four_char_code(KAE::KAELast) => 'last',
+			Codecs.four_char_code(KAE::KAEMiddle) => 'middle',
 			Codecs.four_char_code(KAE::KAEAny) => 'any',
 			}
-	
+
 	AllAbsoluteOrdinal = Codecs.four_char_code(KAE::KAEAll)
-	
+
 	RelativePositionEnums = {
-			Codecs.four_char_code(KAE::KAEPrevious) => 'previous', 
-			Codecs.four_char_code(KAE::KAENext) => 'next', 
+			Codecs.four_char_code(KAE::KAEPrevious) => 'previous',
+			Codecs.four_char_code(KAE::KAENext) => 'next',
 			}
-	
+
 	InsertionLocEnums = {
-			Codecs.four_char_code(KAE::KAEBefore) => 'before', 
-			Codecs.four_char_code(KAE::KAEAfter) => 'after', 
+			Codecs.four_char_code(KAE::KAEBefore) => 'before',
+			Codecs.four_char_code(KAE::KAEAfter) => 'after',
 			Codecs.four_char_code(KAE::KAEBeginning) => 'beginning',
 			Codecs.four_char_code(KAE::KAEEnd) => 'end',
 			}
@@ -522,9 +522,9 @@ class Codecs
 			Codecs.four_char_code(KAE::KAEOR) => 'or',
 			Codecs.four_char_code(KAE::KAENOT) => 'not',
 			}
-	
+
 	#######
-	
+
 	def fully_unpack_object_specifier(desc)
 		# Recursively unpack an object specifier and all of its container descs.
 		# (Note: Codecs#unpack_object_specifier and AEMReference::DeferredSpecifier#_real_ref will call this when needed.)
@@ -574,9 +574,9 @@ class Codecs
 			return unpack(desc)
 		end
 	end
-	
+
 	##
-	
+
 	def unpack_object_specifier(desc)
 		# Shallow-unpack an object specifier, retaining the container AEDesc as-is.
 		# (i.e. Defers full unpacking of [most] object specifiers for efficiency.)
@@ -609,24 +609,24 @@ class Codecs
 		ref.AEM_set_desc(desc) # retain existing AEDesc for efficiency
 		return ref
 	end
-			
-	
+
+
 	def unpack_insertion_loc(desc)
 		return unpack_object_specifier(desc.get_param(KAE::KeyAEObject, KAE::TypeWildCard)).send(InsertionLocEnums[desc.get_param(KAE::KeyAEPosition, KAE::TypeEnumeration).data])
 	end
-	
+
 	##
-	
+
 	def unpack_current_container(desc)
 		return Con
 	end
-	
+
 	def unpack_object_being_examined(desc)
 		return Its
 	end
-	
+
 	##
-	
+
 	def unpack_contains_comp_descriptor(op1, op2)
 		# KAEContains is also used to construct 'is_in' tests, where test value is first operand and
 		# reference being tested is second operand, so need to make sure first operand is an its-based ref;
@@ -638,7 +638,7 @@ class Codecs
 			return op2.is_in(op1)
 		end
 	end
-	
+
 	def unpack_comp_descriptor(desc)
 		operator = ComparisonEnums[desc.get_param(KAE::KeyAECompOperator, KAE::TypeEnumeration).data]
 		op1 = unpack(desc.get_param(KAE::KeyAEObject1, KAE::TypeWildCard))
@@ -649,14 +649,13 @@ class Codecs
 			return op1.send(operator, op2)
 		end
 	end
-	
+
 	def unpack_logical_descriptor(desc)
 		operator = LogicalEnums[desc.get_param(KAE::KeyAELogicalOperator, KAE::TypeEnumeration).data]
 		operands = unpack(desc.get_param(KAE::KeyAELogicalTerms, KAE::TypeAEList))
 		return operands[0].send(operator, *operands[1, operands.length])
 	end
-	
+
 end
 
 DefaultCodecs = Codecs.new
-
