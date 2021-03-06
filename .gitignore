@@ -1,7 +1,6 @@
 /pkg/
 /*.gem
 
-/doc/
 /rdoc/
 /.yardoc/
 /coverage/
