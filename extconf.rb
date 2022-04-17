@@ -44,16 +44,14 @@ if is_ruby_18
 else
   header_path = File.join(config::CONFIG['rubyhdrdir'], 'ruby')
 end
-ruby_h = File.join(header_path, 'ruby.h')
-intern_h = File.join(header_path, 'intern.h')
-backward_h = File.join(header_path, 'backward.h')
 new_filename_prefix = 'osx_'
 
-[
-  ruby_h,
-  intern_h,
-  backward_h,
-].each do |src_path|
+%w[
+  ruby.h
+  intern.h
+  backward.h
+].each do |header_name|
+  src_path = File.join(header_path, header_name)
   next unless File.file?(src_path)
   dst_fname = File.join('./src', new_filename_prefix + File.basename(src_path))
   $stderr.puts "create #{File.expand_path(dst_fname)} ..."
